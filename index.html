@@ -8,7 +8,6 @@
   <title>ConstruAliado | Materiales para construir</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
   <style>
     :root {
       --ink: #172b3a;
@@ -24,6 +23,17 @@
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     }
+    body.auth-locked > :not(#authScreen):not(script) { display: none !important; }
+    #authScreen { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+    #authScreen.d-none { display: none !important; }
+    .auth-card { background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 18px 55px rgba(23,43,58,.12); max-width: 470px; padding: clamp(1.5rem, 5vw, 2.5rem); width: 100%; }
+    .auth-card .brand-lockup { justify-content: center; }
+    .brand-logo { display: block; height: 58px; object-fit: cover; object-position: center 50%; width: 212px; }
+    .auth-card .brand-logo { height: 96px; max-width: 100%; width: 352px; }
+    footer .brand-logo { height: 48px; width: 176px; }
+    .permission-list { display: grid; gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .permission-option { background: #f7f8f9; border: 1px solid var(--line); border-radius: 10px; padding: .65rem .8rem; }
+    .module-badges { display: flex; flex-wrap: wrap; gap: .25rem; }
 
     .topbar { background: #10212d; color: #d7e0e5; font-size: .78rem; }
     .navbar { background: white; }
@@ -204,8 +214,6 @@
     .image-preview img { height: 100%; object-fit: contain; width: 100%; }
     .image-preview i { font-size: 2.5rem; }
     .reference-price { color: #72808a; font-size: .72rem; }
-    #customerMap { border: 1px solid var(--line); border-radius: 12px; height: 300px; z-index: 1; }
-    .map-attribution { color: var(--muted); font-size: .68rem; }
     .order-detail-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
     @media print {
       body * { visibility: hidden; }
@@ -233,7 +241,57 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-locked">
+  <section id="authScreen" aria-label="Acceso al sistema">
+    <div class="auth-card">
+      <a class="brand-lockup d-flex align-items-center text-decoration-none mb-4" href="#">
+        <img class="brand-logo" src="assets/construaliado-logo.png" alt="ConstruAliado — Materiales de construcción y suministros">
+      </a>
+      <div class="alert alert-warning small mb-4">
+        <i class="bi bi-exclamation-triangle me-1"></i>Acceso demostrativo local. Usuarios y permisos se guardan en este navegador; no es una autenticación segura para producción.
+      </div>
+      <div id="authMessage" class="alert alert-danger d-none" role="alert"></div>
+      <section id="initialSetupPanel" class="d-none">
+        <h1 class="h4 fw-bold mb-2">Crear administrador</h1>
+        <p class="text-secondary small mb-3">Configura la primera cuenta. La contraseña ingresada será temporal y deberás cambiarla al iniciar sesión.</p>
+        <form id="initialSetupForm">
+          <label for="initialAdminName" class="form-label fw-semibold">Usuario administrador</label>
+          <input id="initialAdminName" class="form-control mb-3" required minlength="3" maxlength="40" autocomplete="username">
+          <label for="initialAdminPassword" class="form-label fw-semibold">Contraseña temporal</label>
+          <input id="initialAdminPassword" class="form-control mb-3" type="password" required minlength="10" autocomplete="new-password">
+          <button class="btn btn-orange w-100" type="submit">Crear administrador</button>
+        </form>
+      </section>
+      <section id="loginPanel" class="d-none">
+        <h1 class="h4 fw-bold mb-2">Iniciar sesión</h1>
+        <p class="text-secondary small mb-3">Ingresa con la cuenta asignada por el administrador.</p>
+        <form id="loginForm">
+          <label for="loginUsername" class="form-label fw-semibold">Usuario</label>
+          <input id="loginUsername" class="form-control mb-3" required autocomplete="username">
+          <label for="loginPassword" class="form-label fw-semibold">Contraseña</label>
+          <div class="input-group mb-3">
+            <input id="loginPassword" class="form-control" type="password" required autocomplete="current-password">
+            <button id="toggleLoginPassword" class="btn btn-outline-secondary" type="button" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button class="btn btn-orange w-100" type="submit">Entrar</button>
+        </form>
+        <button id="recoverAdminAccess" class="btn btn-link btn-sm px-0 mt-3" type="button">¿Olvidaste la contraseña del administrador?</button>
+      </section>
+      <section id="changePasswordPanel" class="d-none">
+        <h1 class="h4 fw-bold mb-2">Cambia tu contraseña</h1>
+        <p class="text-secondary small mb-3">Por seguridad del flujo, debes cambiar la contraseña temporal antes de entrar.</p>
+        <form id="changePasswordForm">
+          <label for="newPassword" class="form-label fw-semibold">Nueva contraseña</label>
+          <input id="newPassword" class="form-control mb-3" type="password" required minlength="10" autocomplete="new-password">
+          <label for="confirmNewPassword" class="form-label fw-semibold">Confirma la contraseña</label>
+          <input id="confirmNewPassword" class="form-control mb-3" type="password" required minlength="10" autocomplete="new-password">
+          <button class="btn btn-orange w-100" type="submit">Guardar contraseña y entrar</button>
+        </form>
+      </section>
+    </div>
+  </section>
   <div class="topbar py-2">
     <div class="container d-flex justify-content-between align-items-center">
       <span><i class="bi bi-geo-alt me-1"></i>Materiales para tu próximo proyecto</span>
@@ -244,8 +302,7 @@
   <nav class="navbar navbar-expand-lg border-bottom sticky-top">
     <div class="container">
       <a class="navbar-brand d-flex align-items-center me-lg-4" href="#" id="brandLink">
-        <span class="brand-mark"><i class="bi bi-bricks"></i></span>
-        <span class="brand-name">Constru<span>Aliado</span></span>
+        <img class="brand-logo" src="assets/construaliado-logo.png" alt="ConstruAliado — Materiales de construcción y suministros">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Abrir navegación">
         <span class="navbar-toggler-icon"></span>
@@ -255,6 +312,8 @@
           <button class="nav-link active border-0 bg-transparent" type="button" data-view="store">Tienda</button>
           <button class="nav-link border-0 bg-transparent" type="button" data-view="admin">Administración</button>
         </div>
+        <span id="currentUserName" class="small text-secondary me-3"></span>
+        <button id="logoutButton" class="btn btn-sm btn-outline-ink me-3" type="button"><i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión</button>
         <button class="btn btn-outline-ink position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas" aria-controls="cartCanvas">
           <i class="bi bi-cart3 me-1"></i>Carrito / Mi pedido
           <span id="cartCount" class="badge rounded-pill bg-orange cart-badge position-absolute top-0 start-100 translate-middle">0</span>
@@ -338,6 +397,7 @@
       <ul class="nav nav-pills gap-2 mb-4" aria-label="Secciones de administración">
         <li class="nav-item"><button id="inventoryTab" class="nav-link active" type="button" data-admin-tab="inventory"><i class="bi bi-box-seam me-1"></i>Inventario</button></li>
         <li class="nav-item"><button id="ordersTab" class="nav-link" type="button" data-admin-tab="orders"><i class="bi bi-receipt me-1"></i>Pedidos <span id="ordersCount" class="badge rounded-pill bg-orange ms-1">0</span></button></li>
+        <li class="nav-item"><button id="usersTab" class="nav-link" type="button" data-admin-tab="users"><i class="bi bi-people me-1"></i>Usuarios</button></li>
       </ul>
 
       <div id="inventorySection">
@@ -426,14 +486,66 @@
           <span>Las ventas registradas desde la tienda aparecerán aquí.</span>
         </div>
       </section>
+
+      <section id="usersSection" class="d-none">
+        <div class="admin-banner p-3 mb-4">
+          <i class="bi bi-shield-exclamation me-2"></i>Demostración escolar: localStorage puede ser inspeccionado o modificado desde el navegador. No uses contraseñas reales ni publiques esta autenticación como protección de producción.
+        </div>
+        <div class="admin-panel p-3 p-md-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h2 id="userFormTitle" class="h5 fw-bold mb-1">Crear usuario</h2>
+              <p class="product-meta mb-0">La contraseña temporal se solicitará al usuario en su primer inicio de sesión.</p>
+            </div>
+            <button id="cancelUserEdit" class="btn btn-sm btn-outline-ink d-none" type="button">Cancelar edición</button>
+          </div>
+          <form id="userForm">
+            <input id="editingUserId" type="hidden">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="managedUsername" class="form-label fw-semibold">Nombre de usuario</label>
+                <input id="managedUsername" class="form-control" required minlength="3" maxlength="40" autocomplete="off">
+              </div>
+              <div class="col-md-6" id="temporaryPasswordField">
+                <label for="managedTempPassword" class="form-label fw-semibold">Contraseña temporal</label>
+                <div class="input-group">
+                  <input id="managedTempPassword" class="form-control" type="text" required minlength="10" autocomplete="new-password">
+                  <button id="generateTempPassword" class="btn btn-outline-ink" type="button">Generar</button>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Módulos permitidos</label>
+                <div class="permission-list">
+                  <label class="permission-option"><input class="form-check-input me-2" type="checkbox" name="userPermission" value="store">Tienda pública</label>
+                  <label class="permission-option"><input class="form-check-input me-2" type="checkbox" name="userPermission" value="inventory">Inventario</label>
+                  <label class="permission-option"><input class="form-check-input me-2" type="checkbox" name="userPermission" value="orders">Pedidos</label>
+                  <label class="permission-option"><input class="form-check-input me-2" type="checkbox" name="userPermission" value="users">Usuarios</label>
+                </div>
+              </div>
+              <div class="col-12 text-end">
+                <button id="saveUserButton" class="btn btn-orange px-4" type="submit"><i class="bi bi-person-plus me-1"></i>Crear usuario</button>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="admin-panel p-3 p-md-4">
+          <h2 class="h5 fw-bold mb-3">Usuarios del sistema</h2>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead><tr><th>Usuario</th><th>Módulos</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyUsers" class="text-center text-secondary py-4 d-none">No hay usuarios registrados.</div>
+        </div>
+      </section>
     </section>
   </main>
 
   <footer class="py-4 mt-4">
     <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
       <a class="d-flex align-items-center text-decoration-none" href="#" id="footerBrand">
-        <span class="brand-mark" style="width:34px;height:34px;font-size:1rem"><i class="bi bi-bricks"></i></span>
-        <span class="brand-name">Constru<span>Aliado</span></span>
+        <img class="brand-logo" src="assets/construaliado-logo.png" alt="ConstruAliado — Materiales de construcción y suministros">
       </a>
       <span class="small">Materiales para construir tus ideas.</span>
       <span class="small text-white-50">© <span id="currentYear"></span> ConstruAliado</span>
@@ -464,21 +576,7 @@
           <label for="customerNit" class="form-label small fw-semibold mb-1">NIT del cliente</label>
           <input id="customerNit" class="form-control mb-2" required maxlength="25" placeholder="NIT o CF">
           <label for="customerAddress" class="form-label small fw-semibold mb-1">Dirección</label>
-          <textarea id="customerAddress" class="form-control mb-2" required maxlength="200" rows="2" placeholder="Dirección del cliente"></textarea>
-          <div class="small fw-bold text-uppercase text-secondary mb-2">Ubicación de entrega</div>
-          <div class="input-group mb-2">
-            <input id="addressSearch" class="form-control" type="search" placeholder="Buscar dirección o lugar">
-            <button id="searchAddressButton" class="btn btn-outline-ink" type="button" aria-label="Buscar dirección"><i class="bi bi-search"></i></button>
-          </div>
-          <div class="d-flex gap-2 mb-2">
-            <button id="locateMeButton" class="btn btn-sm btn-outline-ink" type="button"><i class="bi bi-crosshair me-1"></i>Usar mi ubicación</button>
-            <button id="confirmLocationButton" class="btn btn-sm btn-orange" type="button" disabled><i class="bi bi-check2 me-1"></i>Confirmar ubicación</button>
-          </div>
-          <div id="customerMap" class="mb-1" role="application" aria-label="Mapa para seleccionar ubicación"></div>
-          <div class="map-attribution mb-1">Mapa © OpenStreetMap contributors, © CARTO · Busca, selecciona el punto en el mapa y confirma.</div>
-          <div id="locationStatus" class="product-meta mb-3" role="status">Selecciona y confirma el punto de entrega para continuar.</div>
-          <input id="customerLatitude" type="hidden">
-          <input id="customerLongitude" type="hidden">
+          <textarea id="customerAddress" class="form-control mb-3" required maxlength="200" rows="2" placeholder="Dirección del cliente"></textarea>
           <label for="customerPhone" class="form-label small fw-semibold mb-1">Teléfono de contacto</label>
           <input id="customerPhone" class="form-control mb-3" type="tel" required maxlength="25" placeholder="Número de teléfono">
           <button class="btn btn-orange w-100" type="submit">Registrar venta local</button>
@@ -516,6 +614,27 @@
     </div>
   </div>
 
+  <div class="modal fade" id="temporaryPasswordModal" tabindex="-1" aria-labelledby="temporaryPasswordTitle" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5 fw-bold" id="temporaryPasswordTitle">Contraseña temporal</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p id="temporaryPasswordMessage" class="small text-secondary"></p>
+          <label for="temporaryPasswordValue" class="form-label fw-semibold">Entrega esta contraseña al usuario</label>
+          <div class="input-group">
+            <input id="temporaryPasswordValue" class="form-control" readonly>
+            <button id="copyTemporaryPassword" class="btn btn-outline-ink" type="button"><i class="bi bi-clipboard me-1"></i>Copiar</button>
+          </div>
+          <p class="form-text mb-0">Se solicitará cambiarla en el primer inicio de sesión. Esta contraseña solo se muestra ahora.</p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-orange" data-bs-dismiss="modal">Listo</button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="appToast" class="toast border-0 shadow" role="status" aria-live="polite" aria-atomic="true">
       <div class="d-flex"><div id="toastMessage" class="toast-body"></div><button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button></div>
@@ -523,7 +642,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     (() => {
       "use strict";
@@ -531,6 +649,15 @@
       const STORE_KEY = "construaliado_products_v1";
       const CART_KEY = "construaliado_cart_v1";
       const SALES_KEY = "construaliado_sales_v1";
+      const USERS_KEY = "construaliado_users_v1";
+      const SESSION_KEY = "construaliado_session_v1";
+      const PERMISSIONS = ["store", "inventory", "orders", "users"];
+      const PERMISSION_LABELS = {
+        store: "Tienda pública",
+        inventory: "Inventario",
+        orders: "Pedidos",
+        users: "Usuarios"
+      };
       let storageLoadFailed = false;
       function loadStoredJSON(key, fallback, validate) {
         try {
@@ -615,15 +742,20 @@
         Object.values(value).every(quantity => Number.isInteger(quantity) && quantity > 0)
       );
       let sales = loadStoredJSON(SALES_KEY, [], Array.isArray);
+      let users = loadStoredJSON(USERS_KEY, [], value =>
+        Array.isArray(value) && value.every(user =>
+          user && typeof user.id === "string" && typeof user.username === "string" &&
+          typeof user.passwordHash === "string" && typeof user.passwordSalt === "string" &&
+          Array.isArray(user.permissions) && typeof user.mustChangePassword === "boolean" &&
+          typeof user.active === "boolean"
+        )
+      );
+      let currentUser = null;
+      let editingUserId = "";
       let activeCategory = "Todos";
       let activeView = "store";
       let pendingImage = null;
       let removeCurrentImage = false;
-      let customerMap = null;
-      let customerMarker = null;
-      let locationConfirmed = false;
-      let reverseLookupSequence = 0;
-      let lastGeocodingRequest = 0;
 
       const $ = selector => document.querySelector(selector);
       const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({
@@ -632,6 +764,49 @@
       const formatPrice = value => new Intl.NumberFormat("es-GT", {
         style: "currency", currency: "GTQ", minimumFractionDigits: 2
       }).format(value);
+      function bytesToBase64(bytes) {
+        return btoa(String.fromCharCode(...new Uint8Array(bytes)));
+      }
+
+      function base64ToBytes(value) {
+        return Uint8Array.from(atob(value), character => character.charCodeAt(0));
+      }
+
+      function requireCrypto() {
+        if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
+          throw new Error("Este navegador no permite el almacenamiento protegido de contraseñas. Abre el proyecto en un navegador compatible.");
+        }
+      }
+
+      async function hashPassword(password, salt = null) {
+        requireCrypto();
+        const saltBytes = salt ? base64ToBytes(salt) : window.crypto.getRandomValues(new Uint8Array(16));
+        const keyMaterial = await window.crypto.subtle.importKey(
+          "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
+        );
+        const derived = await window.crypto.subtle.deriveBits({
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 150000,
+          hash: "SHA-256"
+        }, keyMaterial, 256);
+        return { salt: bytesToBase64(saltBytes), hash: bytesToBase64(derived) };
+      }
+
+      function saveUsers(nextUsers) {
+        try {
+          localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+          users = nextUsers;
+          return true;
+        } catch (error) {
+          const message = "No se pudieron guardar los usuarios en este navegador.";
+          if (document.body.classList.contains("auth-locked")) setAuthMessage(message);
+          else showToast(message);
+          console.error("Error guardando usuarios:", error);
+          return false;
+        }
+      }
+
       const saveProducts = nextProducts => {
         try {
           localStorage.setItem(STORE_KEY, JSON.stringify(nextProducts));
@@ -680,6 +855,148 @@
       function showToast(message) {
         $("#toastMessage").textContent = message;
         bootstrap.Toast.getOrCreateInstance($("#appToast"), { delay: 2600 }).show();
+      }
+
+      function setAuthMessage(message, isError = true) {
+        $("#authMessage").textContent = message;
+        $("#authMessage").classList.toggle("d-none", !message);
+        $("#authMessage").classList.toggle("alert-danger", isError);
+        $("#authMessage").classList.toggle("alert-success", !isError);
+      }
+
+      function showAuthPanel(panelId) {
+        ["initialSetupPanel", "loginPanel", "changePasswordPanel"].forEach(id =>
+          $(`#${id}`).classList.toggle("d-none", id !== panelId)
+        );
+        setAuthMessage("");
+      }
+
+      function persistSession(user) {
+        try {
+          sessionStorage.setItem(SESSION_KEY, user.id);
+          return true;
+        } catch (error) {
+          setAuthMessage("No se pudo guardar la sesión de demostración en esta pestaña.");
+          console.error("Error guardando la sesión local:", error);
+          return false;
+        }
+      }
+
+      function showApplication() {
+        if (!currentUser || !currentUser.active) {
+          currentUser = null;
+          showAuthPanel("loginPanel");
+          setAuthMessage("Inicia sesión con una cuenta activa.");
+          return;
+        }
+        $("#authScreen").classList.add("d-none");
+        document.body.classList.remove("auth-locked");
+        $("#currentUserName").textContent = `Sesión: ${currentUser.username}`;
+        applyUserPermissions();
+        const startingView = currentUser.permissions.includes("store") ? "store" : "admin";
+        setView(startingView);
+      }
+
+      function applyUserPermissions() {
+        const permissions = new Set(currentUser ? currentUser.permissions : []);
+        document.querySelectorAll("[data-view='store']").forEach(button => {
+          button.classList.toggle("d-none", !permissions.has("store"));
+        });
+        document.querySelectorAll("[data-view='admin']").forEach(button => {
+          button.classList.toggle("d-none", !PERMISSIONS.slice(1).some(permission => permissions.has(permission)));
+        });
+        document.querySelectorAll("[data-admin-tab]").forEach(button => {
+          button.classList.toggle("d-none", !permissions.has(button.dataset.adminTab));
+        });
+        document.querySelectorAll("[data-bs-target='#cartCanvas']").forEach(button => {
+          button.classList.toggle("d-none", !permissions.has("store"));
+        });
+        document.querySelectorAll("#adminView .row.g-3.mb-4").forEach(section => {
+          section.classList.toggle("d-none", !permissions.has("inventory"));
+        });
+        $("#newProductButton").classList.toggle("d-none", !permissions.has("inventory"));
+        if (activeView === "admin") {
+          const firstAvailable = PERMISSIONS.slice(1).find(permission => permissions.has(permission));
+          if (firstAvailable) setAdminTab(firstAvailable);
+        }
+      }
+
+      async function initializeAuth() {
+        if (users.length === 0) {
+          showAuthPanel("initialSetupPanel");
+          return;
+        }
+        let sessionId = "";
+        try {
+          sessionId = sessionStorage.getItem(SESSION_KEY) || "";
+        } catch (error) {
+          console.error("No se pudo leer la sesión local:", error);
+        }
+        const sessionUser = users.find(user => user.id === sessionId && user.active);
+        if (sessionUser) {
+          currentUser = sessionUser;
+          if (currentUser.mustChangePassword) {
+            showAuthPanel("changePasswordPanel");
+          } else {
+            showApplication();
+          }
+          return;
+        }
+        try {
+          sessionStorage.removeItem(SESSION_KEY);
+        } catch (error) {
+          console.error("No se pudo limpiar la sesión local:", error);
+        }
+        showAuthPanel("loginPanel");
+      }
+
+      function generateTemporaryPassword() {
+        requireCrypto();
+        const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        const random = window.crypto.getRandomValues(new Uint8Array(18));
+        return Array.from(random, value => alphabet[value % alphabet.length]).join("");
+      }
+
+      function showTemporaryPassword(username, password, isReset) {
+        $("#temporaryPasswordMessage").textContent = isReset
+          ? `Se restableció el acceso de ${username}.`
+          : `Se creó la cuenta ${username}.`;
+        $("#temporaryPasswordValue").value = password;
+        bootstrap.Modal.getOrCreateInstance($("#temporaryPasswordModal")).show();
+      }
+
+      function renderUsers() {
+        const visibleUsers = users.slice().sort((first, second) =>
+          first.username.localeCompare(second.username, "es")
+        );
+        $("#usersBody").innerHTML = visibleUsers.map(user => {
+          const badges = user.permissions.map(permission =>
+            `<span class="badge rounded-pill text-bg-light">${escapeHTML(PERMISSION_LABELS[permission] || permission)}</span>`
+          ).join(" ");
+          const status = user.mustChangePassword ? "Debe cambiar contraseña" : "Activo";
+          return `<tr>
+            <td class="fw-semibold">${escapeHTML(user.username)}${user.id === currentUser?.id ? ' <span class="badge text-bg-secondary">Tú</span>' : ""}</td>
+            <td><div class="module-badges">${badges || '<span class="text-secondary">Sin módulos</span>'}</div></td>
+            <td><span class="badge ${user.active ? "text-bg-success" : "text-bg-secondary"}">${user.active ? status : "Inactivo"}</span></td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-sm btn-outline-ink me-1" type="button" data-edit-user="${escapeHTML(user.id)}" aria-label="Editar módulos de ${escapeHTML(user.username)}"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-ink" type="button" data-reset-user="${escapeHTML(user.id)}" aria-label="Reiniciar contraseña de ${escapeHTML(user.username)}"><i class="bi bi-key"></i><span class="d-none d-md-inline ms-1">Reiniciar contraseña</span></button>
+            </td>
+          </tr>`;
+        }).join("");
+        $("#emptyUsers").classList.toggle("d-none", visibleUsers.length > 0);
+      }
+
+      function resetManagedUserForm() {
+        editingUserId = "";
+        $("#editingUserId").value = "";
+        $("#userForm").reset();
+        $("#managedUsername").disabled = false;
+        $("#managedTempPassword").required = true;
+        $("#temporaryPasswordField").classList.remove("d-none");
+        $("#userFormTitle").textContent = "Crear usuario";
+        $("#saveUserButton").innerHTML = '<i class="bi bi-person-plus me-1"></i>Crear usuario';
+        $("#cancelUserEdit").classList.add("d-none");
       }
 
       function renderCategories() {
@@ -844,12 +1161,6 @@
       }
 
       function renderInvoiceDetails(sale) {
-        const coordinates = sale.customer?.latitude != null && sale.customer?.longitude != null
-          ? `${Number(sale.customer.latitude).toFixed(6)}, ${Number(sale.customer.longitude).toFixed(6)}`
-          : "No registrada";
-        const mapLink = sale.customer?.latitude != null && sale.customer?.longitude != null
-          ? `<a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(sale.customer.latitude)}&mlon=${encodeURIComponent(sale.customer.longitude)}#map=17/${encodeURIComponent(sale.customer.latitude)}/${encodeURIComponent(sale.customer.longitude)}" target="_blank" rel="noopener">Ver ubicación en OpenStreetMap</a>`
-          : "Sin ubicación";
         const rows = (sale.items || []).map(item => `
           <tr>
             <td>${escapeHTML(item.productName || "Producto")}</td>
@@ -867,7 +1178,6 @@
             <div><div class="stat-label">NIT de cliente</div><strong>${escapeHTML(sale.customer?.nit || "—")}</strong></div>
             <div><div class="stat-label">Dirección</div><strong>${escapeHTML(sale.customer?.address || "—")}</strong></div>
             <div><div class="stat-label">Teléfono</div><strong>${escapeHTML(sale.customer?.phone || "—")}</strong></div>
-            <div><div class="stat-label">Coordenadas</div><strong>${escapeHTML(coordinates)}</strong><div>${mapLink}</div></div>
           </div>
           <div class="table-responsive">
             <table class="table table-sm align-middle">
@@ -885,124 +1195,21 @@
       }
 
       function setAdminTab(tab) {
-        const showOrders = tab === "orders";
-        $("#inventorySection").classList.toggle("d-none", showOrders);
-        $("#ordersSection").classList.toggle("d-none", !showOrders);
-        $("#inventoryTab").classList.toggle("active", !showOrders);
-        $("#ordersTab").classList.toggle("active", showOrders);
-        if (showOrders) renderOrders();
-      }
-
-      function setLocationStatus(message, isError = false) {
-        $("#locationStatus").textContent = message;
-        $("#locationStatus").classList.toggle("text-danger", isError);
-        $("#locationStatus").classList.toggle("text-success", !isError && locationConfirmed);
-      }
-
-      async function requestNominatim(url) {
-        const wait = Math.max(0, 1000 - (Date.now() - lastGeocodingRequest));
-        if (wait) await new Promise(resolve => window.setTimeout(resolve, wait));
-        lastGeocodingRequest = Date.now();
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`OpenStreetMap respondió con estado ${response.status}.`);
-        return response.json();
-      }
-
-      async function reverseGeocode(latitude, longitude, sequence) {
-        try {
-          const query = new URLSearchParams({
-            format: "jsonv2",
-            lat: latitude,
-            lon: longitude,
-            zoom: "18",
-            addressdetails: "1"
-          });
-          const result = await requestNominatim(`https://nominatim.openstreetmap.org/reverse?${query}`);
-          if (sequence !== reverseLookupSequence) return;
-          if (result.display_name) {
-            $("#customerAddress").value = result.display_name.slice(0, 200);
-            setLocationStatus("Dirección encontrada. Confirma la ubicación para asociarla al pedido.");
-          } else {
-            setLocationStatus("Punto seleccionado. Escribe la dirección y confírmala.");
-          }
-        } catch (error) {
-          if (sequence !== reverseLookupSequence) return;
-          setLocationStatus("Punto seleccionado. Escribe la dirección manualmente y confírmala.", true);
-          console.error("No se pudo obtener la dirección desde OpenStreetMap:", error);
-        }
-      }
-
-      function selectMapLocation(latitude, longitude, shouldReverseGeocode = true) {
-        locationConfirmed = false;
-        $("#customerAddress").value = "";
-        $("#customerLatitude").value = latitude.toFixed(6);
-        $("#customerLongitude").value = longitude.toFixed(6);
-        $("#confirmLocationButton").disabled = false;
-        if (!customerMarker) {
-          customerMarker = L.marker([latitude, longitude], { draggable: true }).addTo(customerMap);
-          customerMarker.on("dragend", () => {
-            const point = customerMarker.getLatLng();
-            selectMapLocation(point.lat, point.lng);
-          });
-        } else {
-          customerMarker.setLatLng([latitude, longitude]);
-        }
-        customerMap.setView([latitude, longitude], Math.max(customerMap.getZoom(), 16));
-        setLocationStatus("Punto seleccionado. Confirma la ubicación para asociarla al pedido.");
-        reverseLookupSequence += 1;
-        if (shouldReverseGeocode) {
-          reverseGeocode(latitude, longitude, reverseLookupSequence);
-        }
-      }
-
-      function initializeCustomerMap() {
-        if (customerMap) {
-          customerMap.invalidateSize();
-          return;
-        }
-        if (typeof L === "undefined") {
-          setLocationStatus("No se pudo cargar el mapa. Revisa tu conexión a Internet.", true);
-          return;
-        }
-        customerMap = L.map("customerMap").setView([14.6349, -90.5069], 13);
-        const mapTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          maxZoom: 19,
-          subdomains: "abcd",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
-        }).addTo(customerMap);
-        mapTiles.on("tileerror", event => {
-          setLocationStatus("No se pudieron cargar los mosaicos del mapa. Revisa tu conexión a Internet.", true);
-          console.error("Error cargando el mapa base:", event.error || event.tile);
+        const sectionByTab = {
+          inventory: "#inventorySection",
+          orders: "#ordersSection",
+          users: "#usersSection"
+        };
+        const allowed = currentUser && currentUser.permissions.includes(tab);
+        const selectedTab = allowed ? tab : PERMISSIONS.slice(1).find(permission =>
+          currentUser && currentUser.permissions.includes(permission)
+        );
+        Object.entries(sectionByTab).forEach(([name, selector]) => {
+          $(selector).classList.toggle("d-none", name !== selectedTab);
+          $(`[data-admin-tab="${name}"]`).classList.toggle("active", name === selectedTab);
         });
-        customerMap.on("click", event => selectMapLocation(event.latlng.lat, event.latlng.lng));
-        window.setTimeout(() => customerMap.invalidateSize(), 100);
-      }
-
-      async function searchMapAddress() {
-        const address = $("#addressSearch").value.trim();
-        if (!address) {
-          setLocationStatus("Escribe una dirección o lugar para buscarlo.", true);
-          return;
-        }
-        $("#searchAddressButton").disabled = true;
-        setLocationStatus("Buscando dirección en OpenStreetMap…");
-        try {
-          const query = new URLSearchParams({ format: "jsonv2", q: address, countrycodes: "gt", limit: "1" });
-          const results = await requestNominatim(`https://nominatim.openstreetmap.org/search?${query}`);
-          if (!results.length) {
-            setLocationStatus("No encontramos esa dirección. Prueba con otro texto o elige el punto en el mapa.", true);
-            return;
-          }
-          const result = results[0];
-          selectMapLocation(Number(result.lat), Number(result.lon), false);
-          $("#customerAddress").value = String(result.display_name || address).slice(0, 200);
-          setLocationStatus("Resultado seleccionado. Confirma la ubicación para asociarla al pedido.");
-        } catch (error) {
-          setLocationStatus("No se pudo buscar la dirección. Puedes elegir un punto en el mapa.", true);
-          console.error("No se pudo buscar en OpenStreetMap:", error);
-        } finally {
-          $("#searchAddressButton").disabled = false;
-        }
+        if (selectedTab === "orders") renderOrders();
+        if (selectedTab === "users") renderUsers();
       }
 
       function renderAll() {
@@ -1014,6 +1221,9 @@
       }
 
       function setView(view) {
+        if (!currentUser) return;
+        if (view === "store" && !currentUser.permissions.includes("store")) return;
+        if (view === "admin" && !PERMISSIONS.slice(1).some(permission => currentUser.permissions.includes(permission))) return;
         activeView = view;
         $("#storeView").classList.toggle("d-none", view !== "store");
         $("#adminView").classList.toggle("d-none", view !== "admin");
@@ -1023,6 +1233,8 @@
         if (view === "admin") {
           renderInventory();
           renderOrders();
+          const firstAvailable = PERMISSIONS.slice(1).find(permission => currentUser.permissions.includes(permission));
+          if (firstAvailable) setAdminTab(firstAvailable);
         }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -1120,6 +1332,276 @@
         removeCurrentImage = false;
       }
 
+      $("#initialSetupForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const username = $("#initialAdminName").value.trim();
+        const password = $("#initialAdminPassword").value;
+        if (!/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
+          setAuthMessage("El usuario debe tener entre 3 y 40 caracteres: letras, números, punto, guion o guion bajo.");
+          return;
+        }
+        try {
+          const credentials = await hashPassword(password);
+          const admin = {
+            id: `user-${Date.now()}-${generateTemporaryPassword().slice(0, 8)}`,
+            username,
+            ...{ passwordHash: credentials.hash, passwordSalt: credentials.salt },
+            permissions: PERMISSIONS.slice(),
+            mustChangePassword: true,
+            active: true,
+            createdAt: new Date().toISOString()
+          };
+          if (!saveUsers([admin])) return;
+          $("#initialSetupForm").reset();
+          showAuthPanel("loginPanel");
+          setAuthMessage("Administrador creado. Inicia sesión con la contraseña temporal para cambiarla.", false);
+          $("#loginUsername").value = username;
+          $("#loginPassword").focus();
+        } catch (error) {
+          setAuthMessage(error.message || "No se pudo crear el administrador.");
+          console.error("Error creando administrador inicial:", error);
+        }
+      });
+
+      $("#loginForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const username = $("#loginUsername").value.trim().toLocaleLowerCase("es");
+        const password = $("#loginPassword").value;
+        const user = users.find(item => item.username.toLocaleLowerCase("es") === username && item.active);
+        if (!user) {
+          setAuthMessage("Usuario o contraseña incorrectos, o cuenta inactiva.");
+          return;
+        }
+        try {
+          const credentials = await hashPassword(password, user.passwordSalt);
+          if (credentials.hash !== user.passwordHash) {
+            setAuthMessage("Usuario o contraseña incorrectos, o cuenta inactiva.");
+            return;
+          }
+          currentUser = user;
+          if (!persistSession(user)) {
+            currentUser = null;
+            return;
+          }
+          $("#loginForm").reset();
+          if (user.mustChangePassword) {
+            showAuthPanel("changePasswordPanel");
+            $("#newPassword").focus();
+          } else {
+            showApplication();
+          }
+        } catch (error) {
+          setAuthMessage(error.message || "No se pudo validar la contraseña.");
+          console.error("Error validando acceso:", error);
+        }
+      });
+
+      $("#recoverAdminAccess").addEventListener("click", () => {
+        const confirmed = window.confirm(
+          "Esta recuperación local eliminará todas las cuentas y permisos guardados en este navegador. Después podrás crear un administrador nuevo. Los productos, el carrito y los pedidos se conservarán. Esta opción es solo para la demostración y no verifica tu identidad. ¿Deseas continuar?"
+        );
+        if (!confirmed) return;
+        try {
+          sessionStorage.removeItem(SESSION_KEY);
+          localStorage.removeItem(USERS_KEY);
+          users = [];
+          currentUser = null;
+          $("#loginForm").reset();
+          showAuthPanel("initialSetupPanel");
+          setAuthMessage("Se restablecieron las cuentas locales. Crea un nuevo administrador para continuar.", false);
+        } catch (error) {
+          setAuthMessage("No se pudieron restablecer las cuentas en este navegador.");
+          console.error("Error recuperando el acceso de administrador:", error);
+        }
+      });
+
+      $("#toggleLoginPassword").addEventListener("click", event => {
+        const button = event.currentTarget;
+        const passwordInput = $("#loginPassword");
+        const showPassword = passwordInput.type === "password";
+        passwordInput.type = showPassword ? "text" : "password";
+        button.setAttribute("aria-label", showPassword ? "Ocultar contraseña" : "Mostrar contraseña");
+        button.setAttribute("title", showPassword ? "Ocultar contraseña" : "Mostrar contraseña");
+        button.setAttribute("aria-pressed", String(showPassword));
+        button.querySelector("i").className = showPassword ? "bi bi-eye-slash" : "bi bi-eye";
+      });
+
+      $("#changePasswordForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const password = $("#newPassword").value;
+        if (password !== $("#confirmNewPassword").value) {
+          setAuthMessage("Las contraseñas nuevas no coinciden.");
+          return;
+        }
+        if (password.length < 10) {
+          setAuthMessage("La nueva contraseña debe tener al menos 10 caracteres.");
+          return;
+        }
+        try {
+          const credentials = await hashPassword(password);
+          const updated = {
+            ...currentUser,
+            passwordHash: credentials.hash,
+            passwordSalt: credentials.salt,
+            mustChangePassword: false,
+            passwordChangedAt: new Date().toISOString()
+          };
+          const nextUsers = users.map(user => user.id === updated.id ? updated : user);
+          if (!saveUsers(nextUsers)) return;
+          currentUser = updated;
+          $("#changePasswordForm").reset();
+          showApplication();
+        } catch (error) {
+          setAuthMessage(error.message || "No se pudo guardar la nueva contraseña.");
+          console.error("Error cambiando contraseña:", error);
+        }
+      });
+
+      $("#logoutButton").addEventListener("click", () => {
+        try {
+          sessionStorage.removeItem(SESSION_KEY);
+        } catch (error) {
+          console.error("No se pudo cerrar la sesión local:", error);
+        }
+        currentUser = null;
+        document.body.classList.add("auth-locked");
+        $("#authScreen").classList.remove("d-none");
+        showAuthPanel("loginPanel");
+        $("#loginPassword").value = "";
+        $("#loginUsername").focus();
+      });
+
+      $("#generateTempPassword").addEventListener("click", () => {
+        try {
+          $("#managedTempPassword").value = generateTemporaryPassword();
+        } catch (error) {
+          showToast(error.message);
+        }
+      });
+
+      $("#userForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!currentUser || !currentUser.permissions.includes("users")) return;
+        const username = $("#managedUsername").value.trim();
+        const password = $("#managedTempPassword").value;
+        const selectedPermissions = Array.from(document.querySelectorAll("[name='userPermission']:checked"))
+          .map(input => input.value).filter(permission => PERMISSIONS.includes(permission));
+        if (!/^[a-zA-Z0-9._-]{3,40}$/.test(username)) {
+          showToast("El usuario debe tener entre 3 y 40 caracteres: letras, números, punto, guion o guion bajo.");
+          return;
+        }
+        if (selectedPermissions.length === 0) {
+          showToast("Asigna al menos un módulo al usuario.");
+          return;
+        }
+        const duplicate = users.some(user =>
+          user.id !== editingUserId && user.username.toLocaleLowerCase("es") === username.toLocaleLowerCase("es")
+        );
+        if (duplicate) {
+          showToast("Ya existe una cuenta con ese nombre de usuario.");
+          return;
+        }
+        if (editingUserId) {
+          const target = users.find(user => user.id === editingUserId);
+          if (!target) {
+            showToast("No se encontró el usuario que intentas editar.");
+            return;
+          }
+          const updated = { ...target, username, permissions: selectedPermissions };
+          const nextUsers = users.map(user => user.id === target.id ? updated : user);
+          if (!saveUsers(nextUsers)) return;
+          if (currentUser.id === updated.id) currentUser = updated;
+          resetManagedUserForm();
+          renderUsers();
+          if (currentUser.id === updated.id) showApplication();
+          showToast("Usuario y módulos actualizados.");
+          return;
+        }
+        if (password.length < 10) {
+          showToast("La contraseña temporal debe tener al menos 10 caracteres.");
+          return;
+        }
+        try {
+          const credentials = await hashPassword(password);
+          const user = {
+            id: `user-${Date.now()}-${generateTemporaryPassword().slice(0, 8)}`,
+            username,
+            passwordHash: credentials.hash,
+            passwordSalt: credentials.salt,
+            permissions: selectedPermissions,
+            mustChangePassword: true,
+            active: true,
+            createdAt: new Date().toISOString()
+          };
+          if (!saveUsers([...users, user])) return;
+          resetManagedUserForm();
+          renderUsers();
+          showTemporaryPassword(user.username, password, false);
+        } catch (error) {
+          showToast(error.message || "No se pudo crear el usuario.");
+          console.error("Error creando usuario:", error);
+        }
+      });
+
+      $("#cancelUserEdit").addEventListener("click", resetManagedUserForm);
+      $("#usersBody").addEventListener("click", async event => {
+        if (!currentUser || !currentUser.permissions.includes("users")) return;
+        const editButton = event.target.closest("[data-edit-user]");
+        const resetButton = event.target.closest("[data-reset-user]");
+        if (editButton) {
+          const user = users.find(item => item.id === editButton.dataset.editUser);
+          if (!user) return;
+          editingUserId = user.id;
+          $("#editingUserId").value = user.id;
+          $("#managedUsername").value = user.username;
+          $("#managedUsername").disabled = false;
+          $("#managedTempPassword").value = "";
+          $("#managedTempPassword").required = false;
+          $("#temporaryPasswordField").classList.add("d-none");
+          document.querySelectorAll("[name='userPermission']").forEach(input => {
+            input.checked = user.permissions.includes(input.value);
+          });
+          $("#userFormTitle").textContent = `Editar usuario: ${user.username}`;
+          $("#saveUserButton").innerHTML = '<i class="bi bi-check2 me-1"></i>Guardar cambios';
+          $("#cancelUserEdit").classList.remove("d-none");
+          $("#userForm").scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        if (resetButton) {
+          const user = users.find(item => item.id === resetButton.dataset.resetUser);
+          if (!user) return;
+          try {
+            const password = generateTemporaryPassword();
+            const credentials = await hashPassword(password);
+            const updated = {
+              ...user,
+              passwordHash: credentials.hash,
+              passwordSalt: credentials.salt,
+              mustChangePassword: true,
+              passwordChangedAt: null
+            };
+            const nextUsers = users.map(item => item.id === user.id ? updated : item);
+            if (!saveUsers(nextUsers)) return;
+            if (currentUser.id === updated.id) currentUser = updated;
+            renderUsers();
+            showTemporaryPassword(user.username, password, true);
+          } catch (error) {
+            showToast(error.message || "No se pudo reiniciar la contraseña.");
+            console.error("Error reiniciando contraseña:", error);
+          }
+        }
+      });
+
+      $("#copyTemporaryPassword").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText($("#temporaryPasswordValue").value);
+          showToast("Contraseña temporal copiada.");
+        } catch (error) {
+          $("#temporaryPasswordValue").select();
+          showToast("Selecciona y copia la contraseña temporal.");
+        }
+      });
+
       document.querySelectorAll("[data-view]").forEach(button =>
         button.addEventListener("click", () => setView(button.dataset.view))
       );
@@ -1128,58 +1610,6 @@
       );
       $("#brandLink").addEventListener("click", event => { event.preventDefault(); setView("store"); });
       $("#footerBrand").addEventListener("click", event => { event.preventDefault(); setView("store"); });
-      $("#cartCanvas").addEventListener("shown.bs.offcanvas", initializeCustomerMap);
-      $("#searchAddressButton").addEventListener("click", searchMapAddress);
-      $("#addressSearch").addEventListener("keydown", event => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          searchMapAddress();
-        }
-      });
-      $("#locateMeButton").addEventListener("click", () => {
-        if (!navigator.geolocation) {
-          setLocationStatus("Este navegador no permite obtener la ubicación actual. Elige un punto en el mapa.", true);
-          return;
-        }
-        $("#locateMeButton").disabled = true;
-        setLocationStatus("Solicitando permiso para obtener tu ubicación…");
-        navigator.geolocation.getCurrentPosition(
-          position => {
-            selectMapLocation(position.coords.latitude, position.coords.longitude);
-            $("#locateMeButton").disabled = false;
-          },
-          error => {
-            $("#locateMeButton").disabled = false;
-            const message = error.code === error.PERMISSION_DENIED
-              ? "No se concedió permiso de ubicación. Puedes elegir un punto manualmente en el mapa."
-              : "No se pudo obtener tu ubicación. Puedes elegir un punto manualmente en el mapa.";
-            setLocationStatus(message, true);
-          },
-          { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
-        );
-      });
-      $("#confirmLocationButton").addEventListener("click", () => {
-        const latitude = Number($("#customerLatitude").value);
-        const longitude = Number($("#customerLongitude").value);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          setLocationStatus("Primero selecciona un punto en el mapa.", true);
-          return;
-        }
-        if (!$("#customerAddress").value.trim()) {
-          setLocationStatus("No encontramos una dirección. Escríbela antes de confirmar el punto.", true);
-          $("#customerAddress").focus();
-          return;
-        }
-        locationConfirmed = true;
-        setLocationStatus(`Ubicación confirmada: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`);
-      });
-      $("#customerAddress").addEventListener("input", () => {
-        if ($("#customerLatitude").value) {
-          locationConfirmed = false;
-          $("#confirmLocationButton").disabled = false;
-          setLocationStatus("Dirección modificada. Confirma nuevamente la ubicación.");
-        }
-      });
       $("#ordersSearch").addEventListener("input", renderOrders);
       $("#ordersBody").addEventListener("click", event => {
         const button = event.target.closest("[data-order-detail]");
@@ -1355,13 +1785,6 @@
       $("#checkoutForm").addEventListener("submit", event => {
         event.preventDefault();
         if (!Object.keys(cart).length) return;
-        const latitude = Number($("#customerLatitude").value);
-        const longitude = Number($("#customerLongitude").value);
-        if (!locationConfirmed || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          setLocationStatus("Selecciona y confirma el punto de entrega antes de finalizar.", true);
-          $("#confirmLocationButton").focus();
-          return;
-        }
         const items = Object.entries(cart)
           .map(([id, quantity]) => ({ product: products.find(product => product.id === id), quantity }))
           .filter(item => item.product && item.quantity > 0)
@@ -1391,9 +1814,7 @@
             name: $("#customerName").value.trim(),
             nit: $("#customerNit").value.trim(),
             address: $("#customerAddress").value.trim(),
-            phone: $("#customerPhone").value.trim(),
-            latitude,
-            longitude
+            phone: $("#customerPhone").value.trim()
           },
           items,
           total: items.reduce((sum, item) => sum + (item.lineTotal || 0), 0)
@@ -1404,15 +1825,6 @@
         saveCart();
         renderCart();
         $("#checkoutForm").reset();
-        locationConfirmed = false;
-        $("#customerLatitude").value = "";
-        $("#customerLongitude").value = "";
-        $("#confirmLocationButton").disabled = true;
-        setLocationStatus("Selecciona y confirma el punto de entrega para continuar.");
-        if (customerMarker) {
-          customerMap.removeLayer(customerMarker);
-          customerMarker = null;
-        }
         $("#cartCanvas").addEventListener("hidden.bs.offcanvas", () => showPurchaseReceipt(invoice), { once: true });
         bootstrap.Offcanvas.getOrCreateInstance($("#cartCanvas")).hide();
       });
@@ -1420,8 +1832,13 @@
       $("#currentYear").textContent = new Date().getFullYear();
       if (!savedProducts && !storageLoadFailed) saveProducts(products);
       renderAll();
+      initializeAuth();
       if (storageLoadFailed) {
-        showToast("No se pudieron leer algunos datos guardados; revisa la consola del navegador.");
+        if (document.body.classList.contains("auth-locked")) {
+          setAuthMessage("No se pudieron leer algunos datos locales; revisa la consola del navegador.");
+        } else {
+          showToast("No se pudieron leer algunos datos guardados; revisa la consola del navegador.");
+        }
       }
     })();
   </script>
