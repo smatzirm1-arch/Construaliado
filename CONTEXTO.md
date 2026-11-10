@@ -11,7 +11,7 @@ ConstruAliado es un prototipo de tienda web de materiales de construcción para 
 - `CONTEXTO.md`: contexto funcional y técnico del proyecto.
 - HTML, CSS y JavaScript nativo; Bootstrap 5.3.3 y Bootstrap Icons se cargan desde CDN.
 - No hay servidor, API ni base de datos remota.
-- La pantalla inicial requiere autenticación local. En el primer inicio se configura una cuenta administradora.
+- La tienda y el carrito se pueden usar sin iniciar sesión. El acceso local se solicita únicamente al abrir Administración; en el primer intento se configura una cuenta administradora.
 
 ## Funcionalidad actual
 
@@ -21,7 +21,7 @@ ConstruAliado es un prototipo de tienda web de materiales de construcción para 
 - Búsqueda por nombre y filtros por categoría.
 - Muestra precio de venta cuando está definido; de lo contrario, muestra un precio de referencia estimado en quetzales (Q).
 - Las referencias incluyen unidad y son orientativas: pueden variar según marca, medida, zona y flete; no son cotizaciones en tiempo real.
-- Imágenes de categoría ilustrativas por defecto. El administrador puede cargar una foto propia para un producto.
+- Los productos precargados tienen fotos referenciales seleccionadas por nombre desde Wikimedia Commons; cada tarjeta enlaza a la fuente e indica autor y licencia cuando corresponde. La cal usa una foto referencial de material en saco y el pegamento para PVC conserva una foto general de plomería porque no se encontró una foto adecuada para esos productos. El administrador puede sustituir cualquier foto por una imagen propia del producto.
 
 ### Administración
 
@@ -29,11 +29,11 @@ ConstruAliado es un prototipo de tienda web de materiales de construcción para 
 - Incluye una pestaña de pedidos realizados, con búsqueda y detalle de datos de facturación y líneas del pedido. Solo se muestra dentro de la vista de administración.
 - Incluye un módulo local de usuarios: crear cuentas, asignar acceso a Tienda/Inventario/Pedidos/Usuarios, editar permisos y restablecer contraseña con una clave temporal.
 - Las cuentas nuevas y las que reciben una contraseña restablecida deben cambiarla en su siguiente inicio de sesión.
-- Desde el login se puede recuperar el acceso olvidado restableciendo las cuentas locales; después se crea un administrador nuevo. Esto elimina todos los usuarios y permisos, pero conserva productos, carrito y pedidos. No verifica identidad y solo es apropiado para la demostración local.
+- El usuario y la contraseña se solicitan al entrar al módulo Administración, no al abrir la tienda. Desde la pantalla de acceso se puede recuperar el acceso olvidado restableciendo las cuentas locales; después se crea un administrador nuevo. Esto elimina todos los usuarios y permisos, pero conserva productos, carrito y pedidos. No verifica identidad y solo es apropiado para la demostración local.
 - Cada producto puede tener nombre, categoría, precio de venta, existencias, unidad e imagen.
 - El formulario ofrece precio de referencia para los productos iniciales y permite copiarlo al campo del precio de venta.
 - Las imágenes admitidas son JPG, PNG y WebP, con límite de 8 MB antes de procesar. Se redimensionan y comprimen como JPEG para almacenarlas.
-- La administración requiere iniciar sesión en esta demostración local, pero no ofrece protección de acceso real.
+- La administración y sus acciones requieren una sesión con permisos correspondientes; la tienda y el carrito permanecen disponibles sin sesión. Este control de interfaz en JavaScript/localStorage no ofrece protección real frente a inspección o modificación del navegador.
 
 ### Carrito / Mi pedido
 
@@ -56,7 +56,7 @@ La aplicación guarda automáticamente en `localStorage` del navegador:
 | `construaliado_cart_v1` | Cantidades de productos del carrito. |
 | `construaliado_sales_v1` | Ventas locales de demostración, sus datos de empresa/cliente y líneas de producto. |
 | `construaliado_users_v1` | Usuarios, hash PBKDF2 de contraseña, permisos por módulo y estado de cambio obligatorio. |
-- `sessionStorage` usa `construaliado_session_v1` para mantener la sesión en la pestaña actual; al cerrar la pestaña se solicita iniciar sesión otra vez.
+- `sessionStorage` usa `construaliado_session_v1` para mantener la sesión administrativa en la pestaña actual; al cerrar la pestaña se solicita iniciar sesión otra vez al volver a Administración. La tienda siempre abre sin solicitar credenciales.
 
 - En la primera carga se siembra el catálogo inicial y se guarda en `construaliado_products_v1`.
 - Los cambios del inventario y del carrito se escriben en `localStorage`.
@@ -76,7 +76,7 @@ id, name, category, price, stock, unit, referencePrice, referenceUnit, image
 
 - `price`: precio de venta configurado en administración.
 - `referencePrice` y `referenceUnit`: guía referencial para los materiales precargados; productos nuevos no tienen referencia configurada.
-- `image`: imagen del producto en formato Data URL después de optimizarla; vacío si no se cargó una imagen propia.
+- `image`: foto propia del producto en formato Data URL después de optimizarla; vacío si no se cargó una foto, en cuyo caso se utiliza la foto referencial asignada al nombre del producto o, si no hay una adecuada, una foto general de su categoría.
 - `stock`: existencias; en el catálogo inicial permanece sin definir hasta que se administre.
 
 Las ventas incluyen número `CA-######`, fecha, empresa (nombre/NIT), cliente (nombre/NIT/dirección/teléfono), líneas con nombre/cantidad/precio unitario/total y total de venta. Ventas históricas guardadas anteriormente pueden incluir coordenadas, pero ya no se usan en la aplicación.
@@ -88,6 +88,6 @@ Las ventas incluyen número `CA-######`, fecha, empresa (nombre/NIT), cliente (n
 - No tratar los precios de referencia como precios verificados o actuales. Si se requiere exactitud comercial, definir fuentes, fecha de consulta, marca, presentación y ubicación.
 - No presentar la simulación del carrito como pago o compra confirmada.
 - La pestaña de pedidos solo está oculta en la interfaz pública; como el proyecto no tiene backend ni autenticación, no es un área privada segura. No usar para almacenar datos reales sensibles ni publicar el sitio como sistema de producción sin implementar autenticación y almacenamiento protegido.
-- El login/administración de usuarios es solo una demostración escolar en `localStorage`; no protege la aplicación frente a inspección o modificación del navegador. La seguridad real requiere backend, sesiones de servidor y almacenamiento de credenciales protegido.
+- El acceso a Administración y la gestión de usuarios son solo una demostración escolar en `localStorage`; no protegen la aplicación frente a inspección o modificación del navegador. La seguridad real requiere backend, sesiones de servidor y almacenamiento de credenciales protegido.
 - La recuperación de administrador también es local y no es una recuperación segura: cualquier persona con acceso al navegador puede borrar las cuentas y crear otra.
-- Las dependencias CDN e imágenes ilustrativas requieren conexión a Internet.
+- Bootstrap y las fotografías referenciales de Wikimedia Commons requieren conexión a Internet. Las fotos cargadas por el administrador se guardan en el navegador.

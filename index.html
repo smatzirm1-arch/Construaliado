@@ -23,9 +23,20 @@
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     }
-    body.auth-locked > :not(#authScreen):not(script) { display: none !important; }
-    #authScreen { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+    #authScreen {
+      align-items: center;
+      background: rgba(16, 33, 45, .58);
+      display: flex;
+      inset: 0;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      position: fixed;
+      z-index: 1100;
+    }
     #authScreen.d-none { display: none !important; }
+    #adminView.d-none { display: none !important; }
     .auth-card { background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 18px 55px rgba(23,43,58,.12); max-width: 470px; padding: clamp(1.5rem, 5vw, 2.5rem); width: 100%; }
     .auth-card .brand-lockup { justify-content: center; }
     .brand-logo { display: block; height: 58px; object-fit: cover; object-position: center 50%; width: 212px; }
@@ -164,6 +175,8 @@
       padding: .25rem .55rem;
       position: absolute;
     }
+    .photo-credit { font-size: .62rem; line-height: 1.3; }
+    .photo-credit a { color: var(--muted); text-decoration: underline; }
     .product-art i { filter: drop-shadow(0 5px 5px rgba(23,43,58,.12)); }
     .product-category {
       background: rgba(255,255,255,.92);
@@ -241,8 +254,8 @@
     }
   </style>
 </head>
-<body class="auth-locked">
-  <section id="authScreen" aria-label="Acceso al sistema">
+<body>
+  <section id="authScreen" class="d-none" aria-label="Acceso al módulo de administración">
     <div class="auth-card">
       <a class="brand-lockup d-flex align-items-center text-decoration-none mb-4" href="#">
         <img class="brand-logo" src="assets/construaliado-logo.png" alt="ConstruAliado — Materiales de construcción y suministros">
@@ -290,6 +303,7 @@
           <button class="btn btn-orange w-100" type="submit">Guardar contraseña y entrar</button>
         </form>
       </section>
+      <button id="cancelAdminLogin" class="btn btn-link btn-sm px-0 mt-3" type="button">Volver a la tienda</button>
     </div>
   </section>
   <div class="topbar py-2">
@@ -312,8 +326,8 @@
           <button class="nav-link active border-0 bg-transparent" type="button" data-view="store">Tienda</button>
           <button class="nav-link border-0 bg-transparent" type="button" data-view="admin">Administración</button>
         </div>
-        <span id="currentUserName" class="small text-secondary me-3"></span>
-        <button id="logoutButton" class="btn btn-sm btn-outline-ink me-3" type="button"><i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión</button>
+        <span id="currentUserName" class="small text-secondary me-3 d-none"></span>
+        <button id="logoutButton" class="btn btn-sm btn-outline-ink me-3 d-none" type="button"><i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión</button>
         <button class="btn btn-outline-ink position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas" aria-controls="cartCanvas">
           <i class="bi bi-cart3 me-1"></i>Carrito / Mi pedido
           <span id="cartCount" class="badge rounded-pill bg-orange cart-badge position-absolute top-0 start-100 translate-middle">0</span>
@@ -386,7 +400,7 @@
         <button class="btn btn-orange" id="newProductButton"><i class="bi bi-plus-lg me-1"></i>Nuevo producto</button>
       </div>
       <div class="admin-banner p-3 mb-4">
-        <i class="bi bi-database-check me-2"></i>Guardado automático activado: productos, precios, existencias e imágenes se conservan en el almacenamiento local de este navegador. No borres los datos del navegador si quieres conservarlos. Esta sección no tiene inicio de sesión ni protección de servidor. Los precios de referencia son estimados para Guatemala, no cotizaciones en tiempo real.
+        <i class="bi bi-database-check me-2"></i>Guardado automático activado: productos, precios, existencias e imágenes se conservan en el almacenamiento local de este navegador. No borres los datos del navegador si quieres conservarlos. El acceso de demostración no sustituye la protección de un servidor. Los precios de referencia son estimados para Guatemala, no cotizaciones en tiempo real.
       </div>
       <div class="row g-3 mb-4">
         <div class="col-sm-4"><div class="admin-card h-100"><div class="stat-label">Productos en catálogo</div><div class="stat-value" id="statProducts">0</div></div></div>
@@ -691,6 +705,107 @@
         "Plomería": "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80",
         "Herramientas": "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80"
       };
+      const individualProductPhotos = {
+        "Cemento": { file: "Cement bags in Douma.jpg", credit: "Alex.Simon89 - CC BY 4.0" },
+        "Arena de r\u00edo": { file: "Above the construction work, the aggregate storage pile 1a35246v.jpg", credit: "Alfred T. Palmer - Public domain" },
+        "Cal": { file: "Cement Baggies.jpg", credit: "Ramya srivastav - CC BY-SA 4.0" },
+        "Piedr\u00edn 3/8": { file: "Stone crushed into building material.jpg", credit: "BogTar201213 - CC BY-SA 4.0" },
+        "Piedr\u00edn 1/4": { file: "Fine gravel surface with coffee bean for scale.jpg", credit: "Cmoffroad - CC0" },
+        "Piedr\u00edn 1/2": { file: "Coarse aggregate.jpg", credit: "Ohiani David Adinoyi - CC0" },
+        "Arena amarilla": { file: "Sand piling up at Brett Aggregate Works - geograph.org.uk - 6548708.jpg", credit: "Marathon - CC BY-SA 2.0" },
+        "Selecto": { file: "Dirt and Mud 008 - Mud.jpg", credit: "0x0077BE - CC0" },
+        "Block 14 \u00d7 19 \u00d7 39": { file: "Concrete masonry unit 4z .jpg", credit: "Anish nellickal - CC BY-SA 4.0" },
+        "Block 19 \u00d7 19 \u00d7 39": { file: "Concrete-block,japan.JPG", credit: "katorisi - CC BY 2.5" },
+        "Alambre de amarre": { file: "Tie wire.jpg", credit: "sarang - Public domain" },
+        "Clavos": { file: "Contract No. 56, Administration Buildings, Main Dam, Belchertown, setting galvanized nails in cork board, patrol building, Belchertown, Mass., Apr. 14, 1938 - DPLA - 7ae62ed31e52202e8ace3d7775cf8ef2.jpg", credit: "Massachusetts. Metropolitan District Water Supply Commission, Pike, Stuart D., 1910-1978 - Public domain" },
+        "Adoqu\u00edn": { file: "-2021-01-09 Reclaimed concrete paving blocks, Trimingham, Norfolk (1).JPG", credit: "Kolforn - CC BY-SA 4.0" },
+        "Hierro No. 2": { file: "US Navy 040914-N-2970T-029 Builder 3rd Class Mark Dyas, assigned to Naval Mobile Construction Battalion One Three Three (NMCB-133), Detail Sasebo, slices through a steel reinforcement bar.jpg", credit: "U.S. Navy photo by Photographer\u2019s Mate Airman Marvin E. Thompson Jr. - Public domain" },
+        "Hierro No. 3": { file: "Laying steel rebar on new Phoenix overpass (49097447066).jpg", credit: "Oregon Department of Transportation - CC BY 2.0" },
+        "Hierro No. 4": { file: "A bunch of rebar up close.jpg", credit: "W.carter - CC BY-SA 4.0" },
+        "Hierro No. 5": { file: "A crane holding a steel bar at a tea factory construction site in Kyamuhunga Town Council in Western Uganda 01.jpg", credit: "BalukuBrian - CC BY-SA 4.0" },
+        "Hierro No. 6": { file: "Steel reinforcement rods.jpg", credit: "Markus Koljonen ( Dilaudid ) - CC BY-SA 3.0" },
+        "Hierro No. 7": { file: "Rusty rebar nets.jpg", credit: "W.carter - CC BY-SA 4.0" },
+        "Hierro No. 8": { file: "Deck Reinforcement Steel Rebar VT (8495187671).jpg", credit: "Federal Highway Administration - Public domain" },
+        "Hierro No. 9": { file: "A worker ties together reinforcing bar, or rebar, to strengthen concrete floors for a facility that will house 372 students as part of the Herat University Women's Dormitory Project in Herat province 140311-A-DT641-242.jpg", credit: "Bill Dowell - Public domain" },
+        "Hierro No. 10": { file: "Workers on powerhouse roof laying rebar, August 3, 1925 (SPWS 379).jpg", credit: "Unknown author - Public domain" },
+        "Electromalla": { file: "Deck Reinforcement Steel Rebar VT (8495187671).jpg", credit: "Federal Highway Administration - Public domain" },
+        "Bovedillas": { file: "Concrete blocks around a hole.jpg", credit: "BackroomsCrossSpot - CC BY-SA 4.0" },
+        "Cable el\u00e9ctrico": { file: "247 Home Rescue plug extension cable wires.jpg", credit: "247homerescue - CC0" },
+        "Alambre el\u00e9ctrico": { file: "Electric guide 3\u00d72.5 mm.jpg", credit: "Petar Milo\u0161evi\u0107 - CC BY-SA 4.0" },
+        "Tomacorrientes": { file: "Russian stove outlet.jpg", credit: "BPK - CC BY-SA 3.0" },
+        "Interruptores": { file: "White light switch.jpg", credit: "Santeri Viinam\u00e4ki - CC BY-SA 4.0" },
+        "Cajas rectangulares": { file: "Electrical box03.jpg", credit: "Leotard - CC0" },
+        "Tableros el\u00e9ctricos": { file: "Mid-1960s wooden main distribution board.jpg", credit: "Phiarc - CC BY-SA 4.0" },
+        "Breakers": { file: "Stab-Lok circuit breaker panel interior .jpg", credit: "Repeater-reclaim - CC BY-SA 4.0" },
+        "Tuber\u00eda el\u00e9ctrica PVC": { file: "Pvc pipe alignment in a wall.jpg", credit: "Korbla Johnny - CC BY-SA 4.0" },
+        "L\u00e1mparas LED": { file: "ElectroGEAR LED 47403-1.JPG", credit: "Dmitry G - CC BY-SA 3.0" },
+        "Bombillas": { file: "LED light bulb ~171113.jpg", credit: "Grzegorz W. T\u0119\u017cycki - CC BY-SA 4.0" },
+        "Extensiones el\u00e9ctricas": { file: "NEMA-1 extension cord.jpg", credit: "ArnoldReinhold - CC BY-SA 3.0" },
+        "Tubos PVC de diferentes di\u00e1metros": { file: "White pipe to temporarily drain water into large bucket.jpg", credit: "Tomwsulcer - CC0" },
+        "Codos PVC": { file: "Fernco PVC Drain Trap J-Bend-white copy.jpg", credit: "Steven Pavlov (modified by User:Serg!o) - CC0" },
+        "Tees PVC": { file: "PVC plumbing fittings in Awka.jpg", credit: "Johnnybam - CC BY-SA 4.0" },
+        "Adaptadores": { file: "Copper threaded adapters.jpg", credit: "Emilian Robert Vicol - CC BY 2.0" },
+        "Uniones": { file: "PEX installation tools and fittings.jpg", credit: "Tomwsulcer - CC BY-SA 3.0" },
+        "V\u00e1lvulas": { file: "Kitchen renovation new plumbing valve beneath kitchen sink with teflon tape.JPG", credit: "Tomwsulcer - CC0" },
+        "Llaves de paso": { file: "Shower project hot and cold supply lines with PEX shut-off valves added.jpg", credit: "Tomwsulcer - CC0" },
+        "Grifos": { file: "Sink and taps in the men's locker room 3 BW.jpg", credit: "W.carter - CC BY-SA 4.0" },
+        "Duchas": { file: "Shower head.JPG", credit: "Nicole-Koehler - CC BY-SA 3.0" },
+        "Lavamanos": { file: "Premier Inn bathroom handwash basin, Horsham, West Sussex.jpg", credit: "Acabashi - CC BY-SA 4.0" },
+        "Inodoros": { file: "Accessable toilet London Museum Docklands Canary Wharf London England.jpg", credit: "Acabashi - CC BY-SA 4.0" },
+        "Cinta de tefl\u00f3n": { file: "Kitchen renovation new plumbing valve beneath kitchen sink with teflon tape.JPG", credit: "Tomwsulcer - CC0" },
+        "Martillos": { file: "Carpentry materials.jpg", credit: "Anasskoko - CC BY-SA 4.0" },
+        "Palas": { file: "Belkurak 2.png", credit: "AIDEPCUL - CC BY 4.0" },
+        "Piochas": { file: "23.Piquetas y tozuelo de pica.jpg", credit: "Juan R. Lascorz - CC BY-SA 3.0" },
+        "Azadones": { file: "CITY GARDEN WEST AFRICA.jpg", credit: "T.K. Naliaka - CC BY-SA 4.0" },
+        "Carretillas": { file: "Wheelbarrow Outdoors.JPG", credit: "MarkBuckawicki - CC0" },
+        "Cucharas de alba\u00f1il": { file: "Masons trowel.jpg", credit: "Mike Lupinacci - CC BY-SA 3.0" },
+        "Niveles": { file: "Mid 20th century GGC Gjuteri aluminium spirit level made in Eskilstuna Sweden.jpg", credit: "R. Henrik Nilsson - CC BY 4.0" },
+        "Plomadas": { file: "Plumb Bob LACMA M.80.198.176.jpg", credit: "Wikimedia Commons - Public domain" },
+        "Cintas m\u00e9tricas": { file: "DDR Rollma\u00dfband (1).jpg", credit: "Ilmtaler - CC BY-SA 4.0" },
+        "Escuadras": { file: "Steel Square-1.jpg", credit: "Shakespeare at English Wikipedia - CC BY-SA 3.0" },
+        "Serruchos": { file: "Gereedschappen DSCF5053.jpg", credit: "G.Lanting - CC BY 4.0" },
+        "Alicates": { file: "Hand-tool set with bits and accessories arranged on a white surface..jpg", credit: "Wilfredor - CC0" },
+        "Destornilladores": { file: "Screwdriver Crosshead Screwdriver Edited 2020 (49913658911).jpg", credit: "Tool Dude8mm - CC BY 2.0" },
+        "Taladros": { file: "Black and Decker 20-Volt Power Drill (49112921413).jpg", credit: "Tony Webster from Laramie, Wyoming, United States - CC BY 2.0" },
+        "Esmeriles": { file: "Power tools construction dust HK.jpg", credit: "Waydwaid - CC0" }
+      };
+      const constructionPhotos = {
+        cement: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Cement_bags_in_Douma.jpg/960px-Cement_bags_in_Douma.jpg",
+          credit: "Alex.Simon89 · CC BY 4.0",
+          source: "https://commons.wikimedia.org/wiki/File:Cement_bags_in_Douma.jpg"
+        },
+        aggregate: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Above_the_construction_work%2C_the_aggregate_storage_pile_1a35246v.jpg/960px-Above_the_construction_work%2C_the_aggregate_storage_pile_1a35246v.jpg",
+          credit: "Alfred T. Palmer · dominio público",
+          source: "https://commons.wikimedia.org/wiki/File:Above_the_construction_work,_the_aggregate_storage_pile_1a35246v.jpg"
+        },
+        bricks: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/Brick_pile.jpg/960px-Brick_pile.jpg",
+          credit: "Thegreenj · CC BY-SA 3.0",
+          source: "https://commons.wikimedia.org/wiki/File:Brick_pile.jpg"
+        },
+        steel: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/A_crane_holding_a_steel_bar_at_a_tea_factory_construction_site_in_Kyamuhunga_Town_Council_in_Western_Uganda_01.jpg/960px-A_crane_holding_a_steel_bar_at_a_tea_factory_construction_site_in_Kyamuhunga_Town_Council_in_Western_Uganda_01.jpg",
+          credit: "BalukuBrian · CC BY-SA 4.0",
+          source: "https://commons.wikimedia.org/wiki/File:A_crane_holding_a_steel_bar_at_a_tea_factory_construction_site_in_Kyamuhunga_Town_Council_in_Western_Uganda_01.jpg"
+        },
+        electrical: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/247_Home_Rescue_plug_extension_cable_wires.jpg/960px-247_Home_Rescue_plug_extension_cable_wires.jpg",
+          credit: "247 Home Rescue · CC0",
+          source: "https://commons.wikimedia.org/wiki/File:247_Home_Rescue_plug_extension_cable_wires.jpg"
+        },
+        pipe: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Fernco_PVC_Drain_Trap_J-Bend-white_copy.jpg/960px-Fernco_PVC_Drain_Trap_J-Bend-white_copy.jpg",
+          credit: "Steven Pavlov · CC0",
+          source: "https://commons.wikimedia.org/wiki/File:Fernco_PVC_Drain_Trap_J-Bend-white_copy.jpg"
+        },
+        tools: {
+          url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Carpentry_materials.jpg/960px-Carpentry_materials.jpg",
+          credit: "Anasskoko · CC BY-SA 4.0",
+          source: "https://commons.wikimedia.org/wiki/File:Carpentry_materials.jpg"
+        }
+      };
       const referencePrices = {
         "Cemento": [88, "saco 42.5 kg"], "Arena de río": [275, "m³"], "Cal": [55, "saco"],
         "Piedrín 3/8": [300, "m³"], "Piedrín 1/4": [300, "m³"], "Piedrín 1/2": [300, "m³"],
@@ -761,6 +876,43 @@
       const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       })[character]);
+      const productPhotoFor = product => {
+        if (product.image) return { url: product.image, credit: "", source: "" };
+        const individualPhoto = individualProductPhotos[product.name];
+        if (individualPhoto) {
+          const fileName = encodeURIComponent(individualPhoto.file.replace(/ /g, "_"));
+          return {
+            url: `https://commons.wikimedia.org/wiki/Special:FilePath/${fileName}?width=900`,
+            credit: individualPhoto.credit,
+            source: `https://commons.wikimedia.org/wiki/File:${fileName}`
+          };
+        }
+        const name = product.name.toLocaleLowerCase("es");
+        let photo = categoryImages[product.category];
+        let credit = "";
+        let source = "";
+        if (name.includes("cemento") || name === "cal") {
+          ({ url: photo, credit, source } = constructionPhotos.cement);
+        } else if (/(arena|piedrín|selecto)/u.test(name)) {
+          ({ url: photo, credit, source } = constructionPhotos.aggregate);
+        } else if (/(block|adoquín|bovedilla)/u.test(name)) {
+          ({ url: photo, credit, source } = constructionPhotos.bricks);
+        } else if (/(hierro|electromalla|alambre de amarre)/u.test(name)) {
+          ({ url: photo, credit, source } = constructionPhotos.steel);
+        } else if (product.category === "Electricidad" && /(cable|alambre|extensiones)/u.test(name)) {
+          ({ url: photo, credit, source } = constructionPhotos.electrical);
+        } else if (product.category === "Plomería" && /(tubos pvc|codos|tees|adaptadores|uniones|pegamento|teflón)/u.test(name)) {
+          ({ url: photo, credit, source } = constructionPhotos.pipe);
+        } else if (product.category === "Herramientas") {
+          ({ url: photo, credit, source } = constructionPhotos.tools);
+        }
+        return { url: photo, credit, source };
+      };
+      const hasAdminPermission = () => Boolean(currentUser && currentUser.active &&
+        !currentUser.mustChangePassword &&
+        PERMISSIONS.slice(1).some(permission => currentUser.permissions.includes(permission)));
+      const canManageInventory = () => Boolean(hasAdminPermission() &&
+        currentUser.permissions.includes("inventory"));
       const formatPrice = value => new Intl.NumberFormat("es-GT", {
         style: "currency", currency: "GTQ", minimumFractionDigits: 2
       }).format(value);
@@ -800,7 +952,7 @@
           return true;
         } catch (error) {
           const message = "No se pudieron guardar los usuarios en este navegador.";
-          if (document.body.classList.contains("auth-locked")) setAuthMessage(message);
+          if (!$("#authScreen").classList.contains("d-none")) setAuthMessage(message);
           else showToast(message);
           console.error("Error guardando usuarios:", error);
           return false;
@@ -868,6 +1020,7 @@
         ["initialSetupPanel", "loginPanel", "changePasswordPanel"].forEach(id =>
           $(`#${id}`).classList.toggle("d-none", id !== panelId)
         );
+        $("#cancelAdminLogin").classList.toggle("d-none", panelId === "changePasswordPanel");
         setAuthMessage("");
       }
 
@@ -890,26 +1043,27 @@
           return;
         }
         $("#authScreen").classList.add("d-none");
-        document.body.classList.remove("auth-locked");
         $("#currentUserName").textContent = `Sesión: ${currentUser.username}`;
+        $("#currentUserName").classList.remove("d-none");
+        $("#logoutButton").classList.remove("d-none");
         applyUserPermissions();
-        const startingView = currentUser.permissions.includes("store") ? "store" : "admin";
+        const startingView = PERMISSIONS.slice(1).some(permission => currentUser.permissions.includes(permission))
+          ? "admin"
+          : "store";
         setView(startingView);
+        if (startingView === "store") {
+          showToast("Esta cuenta no tiene permisos para abrir Administración.");
+        }
       }
 
       function applyUserPermissions() {
         const permissions = new Set(currentUser ? currentUser.permissions : []);
-        document.querySelectorAll("[data-view='store']").forEach(button => {
-          button.classList.toggle("d-none", !permissions.has("store"));
-        });
         document.querySelectorAll("[data-view='admin']").forEach(button => {
-          button.classList.toggle("d-none", !PERMISSIONS.slice(1).some(permission => permissions.has(permission)));
+          button.classList.toggle("d-none", Boolean(currentUser) &&
+            !PERMISSIONS.slice(1).some(permission => permissions.has(permission)));
         });
         document.querySelectorAll("[data-admin-tab]").forEach(button => {
           button.classList.toggle("d-none", !permissions.has(button.dataset.adminTab));
-        });
-        document.querySelectorAll("[data-bs-target='#cartCanvas']").forEach(button => {
-          button.classList.toggle("d-none", !permissions.has("store"));
         });
         document.querySelectorAll("#adminView .row.g-3.mb-4").forEach(section => {
           section.classList.toggle("d-none", !permissions.has("inventory"));
@@ -948,6 +1102,15 @@
           console.error("No se pudo limpiar la sesión local:", error);
         }
         showAuthPanel("loginPanel");
+      }
+
+      function openAdminAccess() {
+        if (currentUser && !currentUser.mustChangePassword) {
+          setView("admin");
+          return;
+        }
+        $("#authScreen").classList.remove("d-none");
+        initializeAuth();
       }
 
       function generateTemporaryPassword() {
@@ -1037,17 +1200,18 @@
           const availability = purchasable
             ? `${product.stock} ${product.stock === 1 ? "disponible" : "disponibles"}${product.unit ? ` · ${escapeHTML(product.unit)}` : ""}`
             : `${product.referenceUnit ? `Unidad de referencia: ${escapeHTML(product.referenceUnit)} · ` : ""}existencia por confirmar`;
-          const image = product.image || categoryImages[product.category];
+          const photo = productPhotoFor(product);
           return `
             <div class="col-6 col-md-4 col-xl-3">
               <article class="product-card">
                 <div class="product-art">
                   <span class="product-category">${escapeHTML(product.category)}</span>
-                  <img class="product-photo" src="${escapeHTML(image)}" alt="${escapeHTML(product.name)}" loading="lazy">
-                  <span class="product-photo-label">${product.image ? "Foto del producto" : "Imagen ilustrativa"}</span>
+                  <img class="product-photo" src="${escapeHTML(photo.url)}" alt="${escapeHTML(product.name)}" loading="lazy">
+                  <span class="product-photo-label">${product.image ? "Foto del producto" : "Fotografía referencial"}</span>
                 </div>
                 <div class="p-3">
                   <h3>${escapeHTML(product.name)}</h3>
+                  ${photo.source ? `<div class="photo-credit mb-1"><a href="${escapeHTML(photo.source)}" target="_blank" rel="noopener noreferrer">Foto: ${escapeHTML(photo.credit)}</a></div>` : ""}
                   <div class="product-price mb-1">${shownPrice}</div>
                   <div class="reference-price mb-1">${priceDetails}</div>
                   <div class="product-meta mb-3">${availability}</div>
@@ -1603,7 +1767,13 @@
       });
 
       document.querySelectorAll("[data-view]").forEach(button =>
-        button.addEventListener("click", () => setView(button.dataset.view))
+        button.addEventListener("click", () => {
+          if (button.dataset.view === "admin") {
+            openAdminAccess();
+          } else {
+            setView(button.dataset.view);
+          }
+        })
       );
       document.querySelectorAll("[data-admin-tab]").forEach(button =>
         button.addEventListener("click", () => setAdminTab(button.dataset.adminTab))
